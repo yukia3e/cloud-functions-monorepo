@@ -1,0 +1,89 @@
+name: deploy-functions
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: function-artifact
+          path: .
+          retention-days: 1
+
+  function-a:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: function-artifact
+          path: .
+
+      - name: Deploy event function a.
+        uses: ./.github/actions/deploy-event
+        with:
+          workload-identity-provider: xxx
+          auth-service-account-email: xxx
+          build-service-account-email: xxx
+          function-project-id: xxx
+          function-region: xxx
+          source-dir: .
+          name: function_a
+          entry-point: function_a
+          function-service-account-email: xxx
+          trigger-topic: topic_a
+          retry: true
+          env-vars-file: ./env/prd/function/event/a/env.yaml
+          secret-env-vars-file: ./env/prd/function/event/a/secret.yaml
+
+  function-b:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: function-artifact
+          path: .
+
+      - name: Deploy event function b.
+        uses: ./.github/actions/deploy-event
+        with:
+          workload-identity-provider: xxx
+          auth-service-account-email: xxx
+          build-service-account-email: xxx
+          function-project-id: xxx
+          function-region: xxx
+          source-dir: .
+          name: function_b
+          entry-point: function_b
+          function-service-account-email: xxx
+          trigger-topic: topic_b
+          retry: true
+          env-vars-file: ./env/prd/function/event/b/env.yaml

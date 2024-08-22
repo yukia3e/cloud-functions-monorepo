@@ -1,0 +1,23 @@
+services:
+  function-a:
+    build:
+      dockerfile: docker/air/Dockerfile
+    command: air -c docker/air/.air.a.toml
+    env_file:
+      - ./env/local/function/a/.env
+      - ./env/local/function/a/.secret
+    volumes:
+      - ./:/go/src/function/event
+    ports:
+      - "8080:8080"
+
+  function-b:
+    build:
+      dockerfile: docker/air/Dockerfile
+    command: air -c docker/air/.air.b.toml
+    env_file:
+      - ./env/local/function/b/.env
+    volumes:
+      - ./:/go/src/function/event
+    ports:
+      - "8081:8080"

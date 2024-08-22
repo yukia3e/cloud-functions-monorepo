@@ -1,0 +1,117 @@
+name: "Deploy Event"
+description: "Deploy Cloud Functions gen2 Using gcloud command"
+inputs:
+  workload-identity-provider:
+    type: string
+    required: true
+    description: The workload identity provider.
+  auth-service-account-email:
+    type: string
+    required: true
+    description: The service account for Auth.
+  build-service-account-email:
+    type: string
+    required: true
+    description: The service account for Cloud BUild.
+  name:
+    type: string
+    required: true
+    description: Name of the Cloud Function.
+  function-project-id:
+    type: string
+    required: true
+    description: The project ID of the Cloud Function.
+  function-region:
+    type: string
+    required: true
+    description: The region of the Cloud Function.
+  source-dir:
+    type: string
+    required: true
+    description: Source directory for the function.
+  entry-point:
+    type: string
+    required: true
+    description: Name of a function (as defined in source code) that will be executed.
+  function-service-account-email:
+    type: string
+    required: false
+    description: The email address of the Google Cloud service account to use as the runtime service account for the function.
+  trigger-topic:
+    type: string
+    required: false
+    description: Name of Pub/Sub topic.
+  retry:
+    type: boolean
+    required: true
+    description: If true, then the function will be retried in case of a failure.
+  vpc-connector:
+    type: string
+    required: false
+    description: (Optional) The VPC Access connector that the function can connect to.
+  env-vars-file:
+    type: string
+    required: false
+    description: (Optional) Path to a local YAML file with definitions for all environment variables.
+  secret-env-vars-file:
+    type: string
+    required: false
+    description: (Optional) Path to a local YAML file with definitions for all secret environment variables.
+
+runs:
+  using: "composite"
+  steps:
+    - name: Google Auth
+      id: auth
+      uses: "google-github-actions/auth@v2"
+      with:
+        token_format: "access_token"
+        workload_identity_provider: ${{ inputs.workload-identity-provider }}
+        service_account: ${{ inputs.auth-service-account-email }}
+
+    - name: "Set up Cloud SDK"
+      id: setup
+      uses: "google-github-actions/setup-gcloud@v2"
+      with:
+        version: ">= 390.0.0"
+
+    - name: "Use gcloud CLI"
+      run: "gcloud info"
+      shell: bash
+
+    - name: "Deploy Cloud Functions gen2 Using gcloud command"
+      # https://cloud.google.com/sdk/gcloud/reference/functions/deploy
+      # https://cloud.google.com/functions/docs/calling/pubsub?hl=ja
+      id: deploy
+      run: |
+        CMD="gcloud functions deploy ${{ inputs.name }} \
+          --gen2 \
+          --runtime=go122 \
+          --project=${{ inputs.function-project-id }} \
+          --trigger-topic=${{ inputs.trigger-topic }} \
+          --region=${{ inputs.function-region }} \
+          --source=${{ inputs.source-dir }} \
+          --entry-point=${{ inputs.entry-point }} \
+          --build-service-account=projects/${{ inputs.function-project-id }}/serviceAccounts/${{ inputs.build-service-account-email }}
+          --run-service-account=${{ inputs.function-service-account-email }}"
+
+        if [ "${{ inputs.retry }}" = "true" ]; then
+          CMD="$CMD --retry"
+        fi
+
+        if [ "${{ inputs.vpc-connector }}" != "" ]; then
+          CMD="$CMD --vpc-connector=${{ inputs.vpc-connector }}"
+        fi
+
+        if [ "${{ inputs.env-vars-file }}" != "" ]; then
+          CMD="$CMD --env-vars-file=${{ inputs.env-vars-file }}"
+        fi
+
+        if [ "${{ inputs.secret-env-vars-file }}" != "" ]; then
+          secrets=$(awk -F ': ' '{print $1 "=" $2}' ${{ inputs.secret-env-vars-file }} | tr '\n' ',' | sed 's/,$//')
+          CMD="$CMD --set-secrets=$secrets"
+        fi
+
+        echo "Running command: $CMD"
+        eval $CMD
+      shell: bash
