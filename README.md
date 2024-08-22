@@ -32,7 +32,7 @@ curl localhost:8080/function_a \
   -H "ce-type: google.cloud.pubsub.topic.v1.messagePublished" \
   -H "ce-source: //pubsub.googleapis.com/projects/test-project/topics/topic_a" \
   -d '{
-        "id": "d29ybGQ=",
+        "id": "d29ybGQ=func_a",
         "subscription": "projects/test-project/subscriptions/function_a"
       }'
 ```
@@ -49,7 +49,7 @@ curl localhost:8081/function_b \
   -H "ce-type: google.cloud.pubsub.topic.v1.messagePublished" \
   -H "ce-source: //pubsub.googleapis.com/projects/test-project/topics/topic_b" \
   -d '{
-        "id": "d29ybGQ=",
+        "id": "d29ybGQ=func_b",
         "subscription": "projects/test-project/subscriptions/function_b"
       }'
 ```
